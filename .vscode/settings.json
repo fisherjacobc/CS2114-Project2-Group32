@@ -1,0 +1,8 @@
+{
+    "java.autobuild.enabled": true,
+    "java.project.outputPath": "bin",
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.explorer.showNonJavaResources": false,
+}

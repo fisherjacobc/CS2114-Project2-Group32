@@ -104,7 +104,7 @@ public class LinkedChain<T> {
 
         Node<T> curr = head;
         Node<T> found = null;
-        while (curr.getNext() != null) {
+        while (curr != null) {
             if (curr.getData().equals(value)) {
                 found = curr;
                 break;
@@ -130,8 +130,9 @@ public class LinkedChain<T> {
 
         if (head == desiredNode) {
             head = head.getNext();
+            numberOfEntries--;
 
-            return head.getData();
+            return desiredNode.getData();
         }
 
         Node<T> currentNode = head;
@@ -142,6 +143,7 @@ public class LinkedChain<T> {
 
         if (currentNode != null) {
             currentNode.setNext(desiredNode.getNext());
+            numberOfEntries--;
 
             return desiredNode.getData();
         }
