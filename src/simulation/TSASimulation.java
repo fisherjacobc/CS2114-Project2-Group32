@@ -7,6 +7,7 @@ import java.util.Scanner;
 
 import util.LinkedChain;
 import util.LogEntry;
+import util.Node;
 
 /**
  * Write a one-sentence summary of your class here.
@@ -166,15 +167,22 @@ public class TSASimulation {
             return null;
         }
 
-        Person match = findInChain(standardLine, name, flightNumber);
-        if (match != null)
-            return match;
+        Person equivelant = new Passenger(name, flightNumber, false, false, new String[0]);
 
-        match = findInChain(preCheckLine, name, flightNumber);
+        Node<Person> match = standardLine.getFirstReferenceToValue(equivelant);
         if (match != null)
-            return match;
+            return match.getData();
 
-        return findInChain(secondaryScreeningLine, name, flightNumber);
+        match = preCheckLine.getFirstReferenceToValue(equivelant);
+        if (match != null)
+            return match.getData();
+
+        match = secondaryScreeningLine.getFirstReferenceToValue(equivelant);
+
+        if (match != null)
+            return match.getData();
+
+        return null;
     }
 
     /**
@@ -198,8 +206,8 @@ public class TSASimulation {
 
         if (hasProhibited) {
             // Unlink from current line (standard or precheck)
-            standardLine.remove(passenger);
-            preCheckLine.remove(passenger);
+            standardLine.remove(standardLine.getFirstReferenceToValue(passenger));
+            preCheckLine.remove(standardLine.getFirstReferenceToValue(passenger));
 
             // Move to secondary screening
             secondaryScreeningLine.add(passenger);
@@ -354,23 +362,4 @@ public class TSASimulation {
         }
         return chosen.toArray(new String[0]);
     }
-
-    /**
-     * finds person in a chain
-     * 
-     * @param chain        the chain being checked
-     * @param name         the name being checked
-     * @param flightNumber the flight number being checked
-     * @return returns null if person not found or the person if they were found
-     */
-    private Person findInChain(LinkedChain<Person> chain, String name, int flightNumber) {
-        for (Person p : chain) {
-            if (p.getName().equalsIgnoreCase(name) &&
-                    p.getFlightNumber() == flightNumber) {
-                return p;
-            }
-        }
-        return null;
-    }
-
 }

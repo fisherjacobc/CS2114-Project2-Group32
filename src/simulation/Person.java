@@ -6,8 +6,7 @@ package simulation;
  * @author Team 32
  * @version Oct 12, 2026
  */
-public abstract class Person
-{
+public abstract class Person {
     // ~ Fields ................................................................
     private String name;
     private int flightNumber;
@@ -20,37 +19,51 @@ public abstract class Person
      * @param name
      * @param flightNumber
      */
-    public Person(String name, int flightNumber)
-    {
+    public Person(String name, int flightNumber) {
         this.name = name;
         this.flightNumber = flightNumber;
     }
 
     // ~ Public Methods ........................................................
 
-    public String getName()
-    {
+    public String getName() {
         return name;
     }
 
-    public void setName(String name)
-    {
+    public void setName(String name) {
         this.name = name;
     }
 
-    public int getFlightNumber()
-    {
+    public int getFlightNumber() {
         return flightNumber;
     }
 
-    public void setFlightNumber(int flightNumber)
-    {
+    public void setFlightNumber(int flightNumber) {
         this.flightNumber = flightNumber;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "Name: " + name + ", Flight #: " + flightNumber;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj == null) {
+            return false;
+        }
+
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+
+        Person other = (Person) obj;
+
+        return other.getName().equalsIgnoreCase(name) &&
+                other.getFlightNumber() == flightNumber;
     }
 }
