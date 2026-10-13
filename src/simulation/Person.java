@@ -57,7 +57,7 @@ public abstract class Person {
             return false;
         }
 
-        if (getClass() != obj.getClass()) {
+        if (!(obj instanceof Person)) {
             return false;
         }
 
