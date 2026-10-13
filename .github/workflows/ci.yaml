@@ -32,11 +32,18 @@ jobs:
     - name: Download Testing & Coverage Tools
       run: |
         mkdir -p tools
-        # Download JUnit Standalone Engine Launcher
-        curl -sL https://maven.org -o tools/junit-platform-standalone.jar
-        # Download JaCoCo Agent and CLI (v0.8.11 or modern stable release)
-        curl -sL https://maven.org -o tools/jacocoagent.jar
-        curl -sL https://maven.org -o tools/jacococli.jar
+
+        curl -fLsS --retry 3 \
+          https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar \
+          -o tools/junit-platform-standalone.jar
+
+        curl -fLsS --retry 3 \
+          https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.agent/0.8.12/org.jacoco.agent-0.8.12-runtime.jar \
+          -o tools/jacocoagent.jar
+
+        curl -fLsS --retry 3 \
+          https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.cli/0.8.12/org.jacoco.cli-0.8.12-nodeps.jar \
+          -o tools/jacococli.jar
 
     # 4. Compile all Java source files
     - name: Compile Java Files
