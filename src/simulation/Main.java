@@ -1,4 +1,4 @@
-package cs2114;
+package simulation;
 import java.util.Scanner;
 /**
  *  Runs the simulation from top to bottom, handles input from user, 

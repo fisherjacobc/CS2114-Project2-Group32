@@ -1,4 +1,4 @@
-package cs2114;
+package simulation;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
