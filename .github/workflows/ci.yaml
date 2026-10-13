@@ -2,11 +2,10 @@ name: Java CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
-# Required permissions for the test-reporter check runs
 permissions:
   contents: read
   actions: read
@@ -17,107 +16,119 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Pull down your repository code
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      # 1. Check out the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # 2. Set up the Java execution environment
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      # 2. Set up Java 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
 
-    # 3. Download JUnit, JaCoCo Agent, and JaCoCo CLI jars
-    - name: Download Testing & Coverage Tools
-      run: |
-        mkdir -p tools
+      # 3. Download JUnit and JaCoCo
+      - name: Download Testing & Coverage Tools
+        run: |
+          mkdir -p tools
 
-        curl -fLsS --retry 3 \
-          https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar \
-          -o tools/junit-platform-standalone.jar
+          curl -fLsS --retry 3 \
+            https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/junit-platform-console-standalone-1.10.2.jar \
+            -o tools/junit-platform-standalone.jar
 
-        curl -fLsS --retry 3 \
-          https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.agent/0.8.12/org.jacoco.agent-0.8.12-runtime.jar \
-          -o tools/jacocoagent.jar
+          curl -fLsS --retry 3 \
+            https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.agent/0.8.12/org.jacoco.agent-0.8.12-runtime.jar \
+            -o tools/jacocoagent.jar
 
-        curl -fLsS --retry 3 \
-          https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.cli/0.8.12/org.jacoco.cli-0.8.12-nodeps.jar \
-          -o tools/jacococli.jar
+          curl -fLsS --retry 3 \
+            https://repo.maven.apache.org/maven2/org/jacoco/org.jacoco.cli/0.8.12/org.jacoco.cli-0.8.12-nodeps.jar \
+            -o tools/jacococli.jar
 
-    # 4. Compile all Java source files
-    - name: Compile Java Files
-      run: |
-        find . -name "*.java" > sources.txt
-        javac -cp "tools/junit-platform-standalone.jar:." @sources.txt
+      # 4. Compile all Java sources into bin/
+      - name: Compile Java Files
+        run: |
+          mkdir -p bin
 
-    # 5. Run tests with the JaCoCo Agent active, outputting results into standard XML files
-    - name: Run JUnit 5 Tests with Coverage Agent
-      run: |
-        java -javaagent:tools/jacocoagent.jar=destfile=jacoco.exec \
-             -jar tools/junit-platform-standalone.jar \
-             --class-path . \
-             --scan-class-path \
-             --reports-dir=test-results
+          find . -name "*.java" \
+            -not -path "./.git/*" \
+            -not -path "./bin/*" \
+            -not -path "./tools/*" \
+            > sources.txt
 
-    # 6. Parse JUnit XML reports to display individual checkmarks/fails on GitHub UI
-    - name: Publish Test Report
-      uses: dorny/test-reporter@v1
-      if: always() # Run this even if tests failed so you can see what failed
-      with:
-        name: JUnit Test Suite Results
-        path: test-results/TEST-*.xml
-        reporter: java-junit
+          javac -d bin \
+            -cp "tools/junit-platform-standalone.jar" \
+            @sources.txt
 
-    # 7. Convert binary coverage data (jacoco.exec) into a readable XML format via CLI
-    - name: Generate Code Coverage XML Report
-      if: always()
-      run: |
-        if [ -f jacoco.exec ] && [ -d build/classes ]; then
-          java -jar tools/jacococli.jar report jacoco.exec \
-            --classfiles build/classes \
-            --sourcefiles . \
-            --xml jacoco.xml
-        else
-          echo "Missing JaCoCo execution data or compiled classes."
-          exit 1
-        fi
+      # 5. Run JUnit 5 tests and collect coverage
+      - name: Run JUnit 5 Tests with Coverage Agent
+        run: |
+          mkdir -p test-results
 
-    # 8. Post the final code coverage summary metrics into the PR/Action Overview page
-    - name: Publish JaCoCo Coverage Summary
-      if: always() && hashFiles('jacoco.xml') != ''
-      shell: bash
-      run: |
-        python3 - <<'PY'
-        import xml.etree.ElementTree as ET
-        from pathlib import Path
+          java \
+            -javaagent:tools/jacocoagent.jar=destfile=jacoco.exec \
+            -jar tools/junit-platform-standalone.jar execute \
+            --class-path bin \
+            --scan-class-path \
+            --reports-dir=test-results
 
-        root = ET.parse("jacoco.xml").getroot()
-        counters = {}
+      # 6. Publish individual test results to GitHub
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: JUnit Test Suite Results
+          path: test-results/TEST-*.xml
+          reporter: java-junit
 
-        for counter in root.findall("counter"):
-            kind = counter.attrib["type"]
-            missed = int(counter.attrib["missed"])
-            covered = int(counter.attrib["covered"])
-            counters[kind] = (missed, covered)
+      # 7. Generate JaCoCo XML coverage report
+      - name: Generate Code Coverage XML Report
+        if: always()
+        run: |
+          if [ -f jacoco.exec ] && [ -d bin ]; then
+            java -jar tools/jacococli.jar report jacoco.exec \
+              --classfiles bin \
+              --sourcefiles . \
+              --xml jacoco.xml
+          else
+            echo "Missing JaCoCo execution data or bin directory."
+            exit 1
+          fi
 
-        summary = ["## JaCoCo Code Coverage", ""]
+      # 8. Publish coverage percentages to the GitHub Actions summary
+      - name: Publish JaCoCo Coverage Summary
+        if: always() && hashFiles('jacoco.xml') != ''
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
 
-        for kind in ("INSTRUCTION", "BRANCH", "LINE", "METHOD", "CLASS"):
-            if kind not in counters:
-                continue
+          root = ET.parse("jacoco.xml").getroot()
+          counters = {}
 
-            missed, covered = counters[kind]
-            total = missed + covered
-            percent = covered / total * 100 if total else 100.0
+          for counter in root.findall("counter"):
+              kind = counter.attrib["type"]
+              missed = int(counter.attrib["missed"])
+              covered = int(counter.attrib["covered"])
+              counters[kind] = (missed, covered)
 
-            summary.append(
-                f"- **{kind.title()} coverage:** "
-                f"{percent:.2f}% ({covered}/{total})"
-            )
+          summary = ["## JaCoCo Code Coverage", ""]
 
-        summary += ["", "Generated from `jacoco.xml`."]
+          for kind in ("INSTRUCTION", "BRANCH", "LINE", "METHOD", "CLASS"):
+              if kind not in counters:
+                  continue
 
-        with open(Path(__import__("os").environ["GITHUB_STEP_SUMMARY"]), "a") as f:
-            f.write("\n".join(summary) + "\n")
-        PY
+              missed, covered = counters[kind]
+              total = missed + covered
+              percent = covered / total * 100 if total else 100.0
+
+              summary.append(
+                  f"- **{kind.title()} coverage:** "
+                  f"{percent:.2f}% ({covered}/{total})"
+              )
+
+          summary += ["", "Generated from `jacoco.xml`."]
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(summary) + "\n")
+          PY
