@@ -7,4 +7,10 @@
 - Sofia Moreno ([@sofia-m06](https://github.com/sofia-m06))
 - Austin Quesenberry ([@aqberry2506](https://github.com/aqberry2506))
 
-## How to Run
+## How to Compile & Run
+
+## Reflection
+
+## Next Steps
+
+## Attribution
