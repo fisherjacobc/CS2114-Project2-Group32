@@ -123,7 +123,7 @@ public class LinkedChain<T> {
      * @param desiredNode the node to remove
      * @return the data inside the removed node
      */
-    public T removeNode(Node<T> desiredNode) {
+    public T remove(Node<T> desiredNode) {
         if (desiredNode == null || head == null) {
             return null;
         }
