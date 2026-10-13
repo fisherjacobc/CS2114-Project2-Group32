@@ -73,18 +73,51 @@ jobs:
     - name: Generate Code Coverage XML Report
       if: always()
       run: |
-        java -jar tools/jacococli.jar report jacoco.exec \
-             --classfiles . \
-             --sourcefiles . \
-             --xml jacoco.xml
+        if [ -f jacoco.exec ] && [ -d build/classes ]; then
+          java -jar tools/jacococli.jar report jacoco.exec \
+            --classfiles build/classes \
+            --sourcefiles . \
+            --xml jacoco.xml
+        else
+          echo "Missing JaCoCo execution data or compiled classes."
+          exit 1
+        fi
 
     # 8. Post the final code coverage summary metrics into the PR/Action Overview page
-    - name: Publish JaCoCo Coverage Report
-      uses: PavanMudigonda/jacoco-reporter@v5.2
-      if: always()
-      with:
-        coverage_results_path: jacoco.xml
-        coverage_report_name: Code Coverage Summary
-        coverage_report_title: JaCoCo
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        skip_check_run: false
+    - name: Publish JaCoCo Coverage Summary
+      if: always() && hashFiles('jacoco.xml') != ''
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        root = ET.parse("jacoco.xml").getroot()
+        counters = {}
+
+        for counter in root.findall("counter"):
+            kind = counter.attrib["type"]
+            missed = int(counter.attrib["missed"])
+            covered = int(counter.attrib["covered"])
+            counters[kind] = (missed, covered)
+
+        summary = ["## JaCoCo Code Coverage", ""]
+
+        for kind in ("INSTRUCTION", "BRANCH", "LINE", "METHOD", "CLASS"):
+            if kind not in counters:
+                continue
+
+            missed, covered = counters[kind]
+            total = missed + covered
+            percent = covered / total * 100 if total else 100.0
+
+            summary.append(
+                f"- **{kind.title()} coverage:** "
+                f"{percent:.2f}% ({covered}/{total})"
+            )
+
+        summary += ["", "Generated from `jacoco.xml`."]
+
+        with open(Path(__import__("os").environ["GITHUB_STEP_SUMMARY"]), "a") as f:
+            f.write("\n".join(summary) + "\n")
+        PY
