@@ -14,3 +14,12 @@
 ## Next Steps
 
 ## Attribution
+| Class / File | Team Member(s) | Contribution (Wrote, Revised, Tested, Reviewed) |
+| :--- | :--- | :--- |
+| `LinkedChain.java` | Provided Class | Used unchanged |
+| `Person.java` | Austin, Sofia | Wrote and reviewed |
+| `Passenger.java` | Austin, Sofia | Wrote and revised |
+| `Crew.java` | Austin, Sofia | Wrote and reviewed |
+| `TSASimulation.java` | Entire Team | Collaboratively coded and integrated |
+| `Main.java` | Emerson | Wrote and tested |
+| `TSASimulationTest.java` | Emerson, Jacob | Wrote test cases and verified execution |
