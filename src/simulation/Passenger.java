@@ -1,18 +1,19 @@
 package simulation;
 
+import simulation.items.ItemADT;
+
 /**
- * Represents a passenger in the TSA simulation. 
+ * Represents a passenger in the TSA simulation.
  * Extends Person and adds pre-check, secondary screening flags, and items.
  * 
  * @author Team 32
- * @version Oct 12, 2026
+ * @version Oct 20, 2026
  */
-public class Passenger extends Person
-{
+public class Passenger extends Person {
     // ~ Fields ................................................................
     private boolean isPreCheck;
     private boolean isSecondaryScreening;
-    private String[] items;
+    private ItemADT[] items;
 
     // ~ Constructors ..........................................................
 
@@ -26,12 +27,11 @@ public class Passenger extends Person
      * @param items
      */
     public Passenger(
-        String name, 
-        int flightNumber, 
-        boolean isPreCheck, 
-        boolean isSecondaryScreening, 
-        String[] items)
-    {
+            String name,
+            int flightNumber,
+            boolean isPreCheck,
+            boolean isSecondaryScreening,
+            ItemADT[] items) {
         super(name, flightNumber);
         this.isPreCheck = isPreCheck;
         this.isSecondaryScreening = isSecondaryScreening;
@@ -40,40 +40,33 @@ public class Passenger extends Person
 
     // ~ Public Methods ........................................................
 
-    public boolean isPreCheck()
-    {
+    public boolean isPreCheck() {
         return isPreCheck;
     }
 
-    public void setPreCheck(boolean isPreCheck)
-    {
+    public void setPreCheck(boolean isPreCheck) {
         this.isPreCheck = isPreCheck;
     }
 
-    public boolean isSecondaryScreening()
-    {
+    public boolean isSecondaryScreening() {
         return isSecondaryScreening;
     }
 
-    public void setSecondaryScreening(boolean isSecondaryScreening)
-    {
+    public void setSecondaryScreening(boolean isSecondaryScreening) {
         this.isSecondaryScreening = isSecondaryScreening;
     }
 
-    public String[] getItems()
-    {
+    public ItemADT[] getItems() {
         return items;
     }
 
-    public void setItems(String[] items)
-    {
+    public void setItems(ItemADT[] items) {
         this.items = items;
     }
 
     @Override
-    public String toString()
-    {
-        return super.toString() + " [PreCheck: " + isPreCheck + 
-               ", Secondary Screening: " + isSecondaryScreening + "]";
+    public String toString() {
+        return super.toString() + " [PreCheck: " + isPreCheck +
+                ", Secondary Screening: " + isSecondaryScreening + "]";
     }
 }

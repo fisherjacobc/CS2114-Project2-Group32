@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import simulation.items.GenericItem;
+import simulation.items.ItemADT;
+import simulation.items.MetallicItem;
+
 /**
  * Unit tests for the Passenger class. Tests PreCheck and secondary
  * screening flags, carried items, and toString.
@@ -14,14 +18,14 @@ import org.junit.jupiter.api.Test;
 public class PassengerTest {
 
     private Passenger passenger;
-    private String[] items;
+    private ItemADT[] items;
 
     /**
      * Sets up a fresh Passenger instance before each test executes.
      */
     @BeforeEach
     public void setUp() {
-        items = new String[]{"Laptop", "Bag"};
+        items = new ItemADT[]{ new GenericItem("Laptop", false), new GenericItem("Bag", false) };
         passenger = new Passenger("Diana Prince", 606, true, false, items);
     }
 
@@ -56,7 +60,7 @@ public class PassengerTest {
      */
     @Test
     public void testSetItems() {
-        String[] newItems = {"Knife"};
+        ItemADT[] newItems = { new MetallicItem("Knife", true) };
         passenger.setItems(newItems);
         assertArrayEquals(newItems, passenger.getItems());
 

@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import simulation.items.GenericItem;
+import simulation.items.ItemADT;
+
 /**
  * Unit tests for the Person class. Tests accessors, mutators, toString,
  * and equality through concrete subclasses.
@@ -20,7 +23,7 @@ public class PersonTest {
      */
     @BeforeEach
     public void setUp() {
-        person = new Passenger("Alice Johnson", 101, false, false, new String[]{"Bag"});
+        person = new Passenger("Alice Johnson", 101, false, false, new ItemADT[]{ new GenericItem("Bag", false) });
     }
 
     // ~ Accessor & Mutator Tests ..............................................

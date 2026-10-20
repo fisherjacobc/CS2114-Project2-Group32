@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
+import simulation.items.GenericItem;
+import simulation.items.ItemADT;
+import simulation.items.LiquidItem;
+import simulation.items.MetallicItem;
 import util.LinkedChain;
 import util.LogEntry;
 import util.Node;
@@ -21,8 +25,15 @@ public class TSASimulation {
 
     // ~ Fields ................................................................
 
-    private static final String[] PRESET_ITEMS = {
-            "Laptop", "Water Bottle", "Knife", "Bag", "Metal", "Prohibited Item"
+    private static final ItemADT[] PRESET_ITEMS = {
+            new GenericItem("Laptop", false),
+            new LiquidItem("Water Bottle 16oz", 16.0), // > 3.4 oz liquid limit
+            new MetallicItem("Pocket Knife", true), // Prohibited item
+            new GenericItem("Travel Bag", false),
+            new MetallicItem("Metal Scissors", false), // Metal material
+            new LiquidItem("Travel Shampoo", 2.0), // Cleared
+            new LiquidItem("Water Bottle 2oz", 2.0),
+            new LiquidItem("Ranch", 4.0)
     };
 
     private static final String[] PASSENGER_NAMES = {
@@ -39,6 +50,9 @@ public class TSASimulation {
     private final LinkedChain<Person> preCheckLine = new LinkedChain<>();
     private final LinkedChain<Person> secondaryScreeningLine = new LinkedChain<>();
     private final List<LogEntry> detainedLog = new ArrayList<>();
+
+    private int lastPassengerNameIndex = -1;
+    private int lastCrewNameIndex = -1;
 
     private int totalProcessed = 0;
     private int totalFlagged = 0;
@@ -58,7 +72,8 @@ public class TSASimulation {
         if (person == null) {
             throw new IllegalArgumentException("Cannot route a null person.");
         }
-        if (person instanceof Passenger p) {
+        if (person instanceof Passenger) {
+            Passenger p = (Passenger) person;
             if (p.isSecondaryScreening()) {
                 secondaryScreeningLine.add(p);
                 totalFlagged++;
@@ -78,20 +93,32 @@ public class TSASimulation {
     public void addRandomPassenger() {
         int flightNum = 100 + random.nextInt(900);
         if (random.nextBoolean()) {
-            String name = PASSENGER_NAMES[random.nextInt(PASSENGER_NAMES.length)];
+            // Pick a non-repeating passenger name
+            int nameIndex = random.nextInt(PASSENGER_NAMES.length);
+            while (nameIndex == lastPassengerNameIndex && PASSENGER_NAMES.length > 1) {
+                nameIndex = random.nextInt(PASSENGER_NAMES.length);
+            }
+            lastPassengerNameIndex = nameIndex;
+            String name = PASSENGER_NAMES[nameIndex];
 
             boolean preCheck = random.nextBoolean();
             boolean secondaryScreening = !preCheck && random.nextInt(100) < 25;
 
-            String[] items = { PRESET_ITEMS[random.nextInt(PRESET_ITEMS.length)] };
+            ItemADT[] items = { PRESET_ITEMS[random.nextInt(PRESET_ITEMS.length)] };
 
             Passenger passenger = new Passenger(name, flightNum, preCheck, secondaryScreening, items);
-
             routePassenger(passenger);
 
             System.out.println("Added Passenger: " + name + " with Flight # " + flightNum);
         } else {
-            String name = CREW_NAMES[random.nextInt(CREW_NAMES.length)];
+            // Pick a non-repeating crew name
+            int nameIndex = random.nextInt(CREW_NAMES.length);
+            while (nameIndex == lastCrewNameIndex && CREW_NAMES.length > 1) {
+                nameIndex = random.nextInt(CREW_NAMES.length);
+            }
+            lastCrewNameIndex = nameIndex;
+            String name = CREW_NAMES[nameIndex];
+
             String employeeID = "EmpID" + (1000 + random.nextInt(9000));
             Boolean fit = random.nextInt(100) < 90;
 
@@ -99,11 +126,10 @@ public class TSASimulation {
             routePassenger(crew);
             System.out.println("Added Crew: " + name + " with flight #: " + flightNum);
         }
-
     }
 
     /**
-     * adds custom passengertaking scanner input (Option B)
+     * adds custom passenger taking scanner input (Option B)
      * 
      * @param scanner input from scanner
      */
@@ -121,7 +147,7 @@ public class TSASimulation {
                 "Is TSA PreCheck? (y/n): ");
         boolean isSSSS = readValidBoolean(scanner,
                 "Is Flagged for Secondary Screening? (y/n): ");
-        String[] items = selectPresetItems(scanner);
+        ItemADT[] items = selectPresetItems(scanner);
 
         routePassenger(new Passenger(name, flightNum, isPreCheck, isSSSS, items));
         System.out.println("Success: Added " + name + " to line.");
@@ -148,10 +174,76 @@ public class TSASimulation {
 
         System.out.println("Found: " + found);
 
-        if (found instanceof Passenger passenger) {
-            checkPassengerItems(passenger);
+        if (found instanceof Passenger) {
+            Passenger passenger = (Passenger) found;
+            checkPassengerItems(passenger, scanner);
         } else {
+            removeFromLines(found);
+            totalProcessed++;
             System.out.println("Person is Crew; cleared for security.");
+        }
+    }
+
+    /**
+     * Checks a passenger's items and decides what happens to them. Every
+     * check removes the passenger from the line they were in.
+     * 
+     * On the initial check, a prohibited item lets the user choose to detain
+     * the passenger or send them to secondary screening, and a metallic item
+     * sends them to secondary screening automatically. If the passenger is
+     * already in secondary screening, a prohibited item detains them and
+     * otherwise they are cleared.
+     * 
+     * @param passenger the passenger getting checked
+     * @param scanner   input
+     */
+    public void checkPassengerItems(Passenger passenger, Scanner scanner) {
+        boolean inSecondary = secondaryScreeningLine.getFirstReferenceToValue(passenger) != null;
+        String prohibitedReason = null;
+        boolean hasMetallic = false;
+
+        if (passenger.getItems() != null) {
+            for (ItemADT item : passenger.getItems()) {
+                if (item == null) {
+                    continue;
+                }
+                if (prohibitedReason == null && item.isProhibited()) {
+                    prohibitedReason = item.getReason();
+                }
+                if (item instanceof MetallicItem) {
+                    hasMetallic = true;
+                }
+            }
+        }
+
+        removeFromLines(passenger);
+
+        if (inSecondary) {
+            if (prohibitedReason != null) {
+                System.out.println("[FLAGGED] Secondary screening violation: " + prohibitedReason);
+                detainPassenger(passenger, prohibitedReason);
+            } else {
+                clearPassenger(passenger);
+            }
+        } else if (prohibitedReason != null) {
+            System.out.println("[FLAGGED] Violation detected: " + prohibitedReason);
+            System.out.println("Choose Action for " + passenger.getName() + ":");
+            System.out.println("  1. Detain Passenger");
+            System.out.println("  2. Send to Secondary Screening Line");
+            System.out.print("Enter choice (1 or 2): ");
+
+            String choice = scanner.nextLine().trim();
+
+            if ("1".equals(choice)) {
+                detainPassenger(passenger, prohibitedReason);
+            } else {
+                sendToSecondaryScreening(passenger);
+            }
+        } else if (hasMetallic) {
+            System.out.println("[FLAGGED] Metallic item detected.");
+            sendToSecondaryScreening(passenger);
+        } else {
+            clearPassenger(passenger);
         }
     }
 
@@ -167,7 +259,7 @@ public class TSASimulation {
             return null;
         }
 
-        Person equivelant = new Passenger(name, flightNumber, false, false, new String[0]);
+        Person equivelant = new Passenger(name, flightNumber, false, false, new ItemADT[0]);
 
         Node<Person> match = standardLine.getFirstReferenceToValue(equivelant);
         if (match != null)
@@ -186,56 +278,30 @@ public class TSASimulation {
     }
 
     /**
-     * checks a passengers items
-     * 
-     * @param passenger the passenger being checked
+     * gets the number of people cleared or detained
+     *
+     * @return the total processed
      */
-    public void checkPassengerItems(Passenger passenger) {
-        boolean hasProhibited = false;
-        String foundItem = "";
-
-        if (passenger.getItems() != null) {
-            for (String item : passenger.getItems()) {
-                if (isProhibitedItem(item)) {
-                    hasProhibited = true;
-                    foundItem = item;
-                    break;
-                }
-            }
-        }
-
-        if (hasProhibited) {
-            // Unlink from current line (standard or precheck)
-            standardLine.remove(standardLine.getFirstReferenceToValue(passenger));
-            preCheckLine.remove(standardLine.getFirstReferenceToValue(passenger));
-
-            // Move to secondary screening
-            secondaryScreeningLine.add(passenger);
-            totalFlagged++;
-
-            System.out.println("FLAGGED: Prohibited item found ("
-                    + foundItem + ")!");
-            System.out.println("Passenger " + passenger.getName()
-                    + " moved to Secondary Screening Line.");
-        } else {
-            System.out.println("CLEARED: No prohibited items found for "
-                    + passenger.getName() + ".");
-        }
+    public int getTotalProcessed() {
+        return totalProcessed;
     }
 
     /**
-     * boolean helper that looks for a prohibited item
-     * 
-     * @param item
-     * @return true if person has a prohibited item
+     * gets the number of passengers sent to secondary screening
+     *
+     * @return the total flagged
      */
-    private boolean isProhibitedItem(String item) {
-        if (item == null) {
-            return false;
-        }
-        String clean = item.toLowerCase();
-        return clean.contains("water bottle") || clean.contains("knife") ||
-                clean.contains("prohibited item");
+    public int getTotalFlagged() {
+        return totalFlagged;
+    }
+
+    /**
+     * gets the number of detained passengers
+     *
+     * @return the number of entries in the detained log
+     */
+    public int getTotalDetained() {
+        return detainedLog.size();
     }
 
     /**
@@ -247,10 +313,18 @@ public class TSASimulation {
         System.out.println("==================================================");
         System.out.println("Passengers Processed:     "
                 + totalProcessed);
-        System.out.println("Passengers Flagged (SSSS): "
+        System.out.println("Passengers Flagged (SS): "
                 + totalFlagged);
-        System.out.println("Total Detained:           "
-                + detainedLog.size());
+        // System.out.println("Total Detained: "
+        // + totalDetained);
+        System.out.println("Detained Log: ");
+        if (detainedLog.isEmpty()) {
+            System.out.println("No persons detained");
+        } else {
+            for (LogEntry entry : detainedLog) {
+                System.out.println(entry);
+            }
+        }
         System.out.println("Standard Line Queue:      "
                 + standardLine.getCurrentSize());
         System.out.println("PreCheck Line Queue:      "
@@ -292,8 +366,54 @@ public class TSASimulation {
     }
 
     /**
+     * removes a person from whichever line they are currently in
+     *
+     * @param person the person being removed
+     */
+    private void removeFromLines(Person person) {
+        standardLine.remove(standardLine.getFirstReferenceToValue(person));
+        preCheckLine.remove(preCheckLine.getFirstReferenceToValue(person));
+        secondaryScreeningLine.remove(secondaryScreeningLine.getFirstReferenceToValue(person));
+    }
+
+    /**
+     * clears a passenger through security
+     *
+     * @param passenger the passenger being cleared
+     */
+    private void clearPassenger(Passenger passenger) {
+        totalProcessed++;
+        System.out.println("CLEARED: No prohibited items found for " + passenger.getName() + ".");
+    }
+
+    /**
+     * detains a passenger and records them in the detained log
+     *
+     * @param passenger the passenger being detained
+     * @param reason    why the passenger is being detained
+     */
+    private void detainPassenger(Passenger passenger, String reason) {
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        detainedLog.add(new LogEntry(timestamp, passenger.getName(), reason, false));
+        totalProcessed++;
+        System.out.println("--> Passenger " + passenger.getName() + " has been DETAINED.");
+    }
+
+    /**
+     * moves a passenger to the secondary screening line
+     *
+     * @param passenger the passenger being moved
+     */
+    private void sendToSecondaryScreening(Passenger passenger) {
+        passenger.setSecondaryScreening(true);
+        secondaryScreeningLine.add(passenger);
+        totalFlagged++;
+        System.out.println("--> Passenger " + passenger.getName() + " moved to Secondary Screening Line.");
+    }
+
+    /**
      * decides whether to accept user entry
-     * 
+     *
      * @param scanner the user input
      * @return the number if successfully checked and accepted
      */
@@ -334,11 +454,11 @@ public class TSASimulation {
      * @param scanner the user input
      * @return
      */
-    private String[] selectPresetItems(Scanner scanner) {
-        List<String> chosen = new ArrayList<>();
+    private ItemADT[] selectPresetItems(Scanner scanner) {
+        List<ItemADT> chosen = new ArrayList<>();
         System.out.println("Select Items (0 when finished):");
         for (int i = 0; i < PRESET_ITEMS.length; i++) {
-            System.out.println((i + 1) + ": " + PRESET_ITEMS[i]);
+            System.out.println((i + 1) + ": " + PRESET_ITEMS[i].getName());
         }
 
         while (true) {
@@ -351,7 +471,7 @@ public class TSASimulation {
                 }
                 if (choice >= 1 && choice <= PRESET_ITEMS.length) {
                     chosen.add(PRESET_ITEMS[choice - 1]);
-                    System.out.println("-> Added: " + PRESET_ITEMS[choice - 1]);
+                    System.out.println("-> Added: " + PRESET_ITEMS[choice - 1].getName());
                 } else {
                     System.out
                             .println("Error: Choice must be between 1 and " + PRESET_ITEMS.length + " (or 0 to stop).");
@@ -360,6 +480,6 @@ public class TSASimulation {
                 System.out.println("Error: Please enter a valid number.");
             }
         }
-        return chosen.toArray(new String[0]);
+        return chosen.toArray(new ItemADT[0]);
     }
 }
