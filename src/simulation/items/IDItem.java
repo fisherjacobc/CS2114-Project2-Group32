@@ -12,12 +12,13 @@ public class IDItem extends ItemADT {
 
     public IDItem(String name, Passenger passenger, boolean isReal) {
         super(name);
+        this.passenger = passenger;
 
         // Random letter to let passengers with the same name have a "unique" ID #
         if (isReal) {
-            idNumber = (char) ('A' + random.nextInt(7)) + "" + passenger.getName().hashCode();
+            idNumber = (char) ('A' + random.nextInt(6)) + "" + passenger.getName().hashCode();
         } else {
-            idNumber = (char) ('G' + random.nextInt(19)) + "" + random.nextInt(2 ^ 28);
+            idNumber = (char) ('G' + random.nextInt(19)) + "" + random.nextInt(1 << 28);
         }
     }
 
