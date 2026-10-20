@@ -1,10 +1,12 @@
 package simulation;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Scanner;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Scanner;
 
 import simulation.items.GenericItem;
 import simulation.items.ItemADT;
@@ -21,13 +23,25 @@ import simulation.items.MetallicItem;
 public class TSASimulationTest {
 
     private TSASimulation sim;
+    private PrintStream originalOut;
 
     /**
-     * Sets up a fresh TSASimulation instance before each test executes.
+     * Sets up a fresh TSASimulation instance and redirects System.out
+     * before each test executes.
      */
     @BeforeEach
     public void setUp() {
         sim = new TSASimulation();
+        originalOut = System.out;
+        System.setOut(new PrintStream(new ByteArrayOutputStream()));
+    }
+
+    /**
+     * Restores System.out after each test executes.
+     */
+    @AfterEach
+    public void tearDown() {
+        System.setOut(originalOut);
     }
 
     // ~ Validation Logic Tests ................................................
