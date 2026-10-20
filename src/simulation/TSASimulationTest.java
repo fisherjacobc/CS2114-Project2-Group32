@@ -528,6 +528,8 @@ public class TSASimulationTest {
         assertTrue(printed.contains("PreCheck (1)"));
         assertTrue(printed.contains("Secondary (0)"));
         assertTrue(printed.indexOf("First Person") < printed.indexOf("Second Person"));
+        assertTrue(printed.contains("#101"));
+        assertTrue(printed.contains("#103"));
     }
 
     /**

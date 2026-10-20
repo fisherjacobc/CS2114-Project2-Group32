@@ -485,18 +485,18 @@ public class TSASimulation {
 
         int rows = Math.max(1, Math.max(standard.size(), Math.max(preCheck.size(), secondary.size())));
 
-        System.out.println("┌──Security Lines (front to back)─────────────────────────────────────────┐");
-        System.out.println("├────┬──────────────────────┬──────────────────────┬──────────────────────┤");
-        System.out.printf("│  # │ %-20s │ %-20s │ %-20s │%n",
+        System.out.println("┌──Security Lines (front to back)─────────────────────────────────────────────────────────────────┐");
+        System.out.println("├────┬──────────────────────────────┬──────────────────────────────┬──────────────────────────────┤");
+        System.out.printf("│  # │ %-28s │ %-28s │ %-28s │%n",
                 "Standard (" + standard.size() + ")",
                 "PreCheck (" + preCheck.size() + ")",
                 "Secondary (" + secondary.size() + ")");
-        System.out.println("├────┼──────────────────────┼──────────────────────┼──────────────────────┤");
+        System.out.println("├────┼──────────────────────────────┼──────────────────────────────┼──────────────────────────────┤");
         for (int i = 0; i < rows; i++) {
-            System.out.printf("│ %2d │ %-20s │ %-20s │ %-20s │%n", i + 1,
+            System.out.printf("│ %2d │ %-28s │ %-28s │ %-28s │%n", i + 1,
                     getLineCell(standard, i), getLineCell(preCheck, i), getLineCell(secondary, i));
         }
-        System.out.println("└────┴──────────────────────┴──────────────────────┴──────────────────────┘");
+        System.out.println("└────┴──────────────────────────────┴──────────────────────────────┴──────────────────────────────┘");
     }
 
     /**
@@ -504,8 +504,8 @@ public class TSASimulation {
      *
      * @param line     the people in the line, front first
      * @param position the spot in the line
-     * @return the person's name, "(empty)" for an empty line, or blank if
-     *         the line is shorter than the position
+     * @return the person's name and flight number, "(empty)" for an empty
+     *         line, or blank if the line is shorter than the position
      */
     private String getLineCell(List<Person> line, int position) {
         if (line.isEmpty()) {
@@ -515,11 +515,12 @@ public class TSASimulation {
             return "";
         }
 
-        String name = line.get(position).getName();
+        Person person = line.get(position);
+        String name = person.getName();
         if (name.length() > 20) {
-            return name.substring(0, 19) + "…";
+            name = name.substring(0, 19) + "…";
         }
-        return name;
+        return String.format("%-20s #%d", name, person.getFlightNumber());
     }
 
     /**
