@@ -12,7 +12,7 @@ public class MetallicItem extends GenericItem {
         }
 
         String loweredName = name.toLowerCase();
-        if (loweredName.contains("metal") || loweredName.contains("weapon") || loweredName.contains("prohibited")
+        if (loweredName.contains("weapon") || loweredName.contains("prohibited")
                 || loweredName.contains("battery")) {
             return true;
         }

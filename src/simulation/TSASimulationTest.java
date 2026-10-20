@@ -186,17 +186,19 @@ public class TSASimulationTest {
     // ~ Security Item Checking Tests ..........................................
 
     /**
-     * Tests checkPassengerItems when a passenger carries no prohibited items.
+     * Tests checkPassengerItems when a passenger carries no prohibited items,
+     * verifying they are cleared and leave the line.
      */
     @Test
     public void testCheckPassengerItems_SafeItems() {
         Passenger p = new Passenger("Fiona Jones", 808, false, false, new ItemADT[]{ new GenericItem("Laptop", false), new GenericItem("Bag", false) });
         sim.routePassenger(p);
 
-        sim.checkPassengerItems(p, new Scanner("2\n"));
+        sim.checkPassengerItems(p, new Scanner(""));
 
-        Person found = sim.searchPassenger("Fiona Jones", 808);
-        assertNotNull(found);
+        assertNull(sim.searchPassenger("Fiona Jones", 808));
+        assertEquals(1, sim.getTotalProcessed());
+        assertEquals(0, sim.getTotalDetained());
     }
 
     /**
@@ -212,6 +214,8 @@ public class TSASimulationTest {
 
         Person found = sim.searchPassenger("Bad Actor", 909);
         assertNotNull(found);
+        assertTrue(p.isSecondaryScreening());
+        assertEquals(1, sim.getTotalFlagged());
     }
 
     /**
@@ -226,6 +230,92 @@ public class TSASimulationTest {
 
         Person found = sim.searchPassenger("Risk Person", 111);
         assertNotNull(found);
+        assertTrue(p.isSecondaryScreening());
+    }
+
+    /**
+     * Tests that choosing to detain a passenger with a prohibited item logs
+     * them and removes them from the line.
+     */
+    @Test
+    public void testCheckPassengerItems_ProhibitedDetain() {
+        Passenger p = new Passenger("Risk Person", 111, false, false, new ItemADT[]{ new LiquidItem("Ranch", 4.0) });
+        sim.routePassenger(p);
+
+        sim.checkPassengerItems(p, new Scanner("1\n"));
+
+        assertNull(sim.searchPassenger("Risk Person", 111));
+        assertEquals(1, sim.getTotalDetained());
+        assertEquals(1, sim.getTotalProcessed());
+        assertEquals(0, sim.getTotalFlagged());
+    }
+
+    /**
+     * Tests that an allowed metallic item sends the passenger to secondary
+     * screening without asking for a choice.
+     */
+    @Test
+    public void testCheckPassengerItems_MetallicItem() {
+        Passenger p = new Passenger("Clark Kent", 222, true, false, new ItemADT[]{ new MetallicItem("Belt Buckle", false) });
+        sim.routePassenger(p);
+
+        sim.checkPassengerItems(p, new Scanner(""));
+
+        assertNotNull(sim.searchPassenger("Clark Kent", 222));
+        assertTrue(p.isSecondaryScreening());
+        assertEquals(1, sim.getTotalFlagged());
+        assertEquals(0, sim.getTotalProcessed());
+    }
+
+    /**
+     * Tests that a passenger in secondary screening with only an allowed
+     * metallic item is cleared on their second check.
+     */
+    @Test
+    public void testCheckPassengerItems_SecondaryCleared() {
+        Passenger p = new Passenger("Clark Kent", 222, false, false, new ItemADT[]{ new MetallicItem("Belt Buckle", false) });
+        sim.routePassenger(p);
+
+        sim.checkPassengerItems(p, new Scanner(""));
+        sim.checkPassengerItems(p, new Scanner(""));
+
+        assertNull(sim.searchPassenger("Clark Kent", 222));
+        assertEquals(0, sim.getTotalDetained());
+        assertEquals(1, sim.getTotalProcessed());
+        assertEquals(1, sim.getTotalFlagged());
+    }
+
+    /**
+     * Tests that a passenger who is still carrying a prohibited item in
+     * secondary screening is detained without being asked for a choice.
+     */
+    @Test
+    public void testCheckPassengerItems_SecondaryDetained() {
+        Passenger p = new Passenger("Bad Actor", 909, false, false, new ItemADT[]{ new LiquidItem("Water Bottle", 16.0) });
+        sim.routePassenger(p);
+
+        sim.checkPassengerItems(p, new Scanner("2\n"));
+        sim.checkPassengerItems(p, new Scanner(""));
+
+        assertNull(sim.searchPassenger("Bad Actor", 909));
+        assertEquals(1, sim.getTotalDetained());
+        assertEquals(1, sim.getTotalProcessed());
+        assertEquals(1, sim.getTotalFlagged());
+    }
+
+    /**
+     * Tests that a passenger routed straight into secondary screening is
+     * detained on their first check if they carry a prohibited item.
+     */
+    @Test
+    public void testCheckPassengerItems_RoutedSecondaryDetained() {
+        Passenger p = new Passenger("John Patel", 404, false, true, new ItemADT[]{ new MetallicItem("Knife", true) });
+        sim.routePassenger(p);
+
+        sim.checkPassengerItems(p, new Scanner(""));
+
+        assertNull(sim.searchPassenger("John Patel", 404));
+        assertEquals(1, sim.getTotalDetained());
     }
 
     /**
@@ -239,11 +329,26 @@ public class TSASimulationTest {
         sim.routePassenger(p1);
         sim.routePassenger(p2);
 
-        sim.checkPassengerItems(p1, new Scanner("2\n"));
-        sim.checkPassengerItems(p2, new Scanner("2\n"));
+        sim.checkPassengerItems(p1, new Scanner(""));
+        sim.checkPassengerItems(p2, new Scanner(""));
 
-        assertNotNull(sim.searchPassenger("No Items", 222));
-        assertNotNull(sim.searchPassenger("Empty Array", 333));
+        assertNull(sim.searchPassenger("No Items", 222));
+        assertNull(sim.searchPassenger("Empty Array", 333));
+        assertEquals(2, sim.getTotalProcessed());
+    }
+
+    /**
+     * Tests searchAndCheckPassenger on a crew member, verifying they are
+     * cleared and leave the line.
+     */
+    @Test
+    public void testSearchAndCheckPassenger_Crew() {
+        sim.routePassenger(new Crew("Capt. Smith", 505, "Emp123", true));
+
+        sim.searchAndCheckPassenger(new Scanner("Capt. Smith\n505\n"));
+
+        assertNull(sim.searchPassenger("Capt. Smith", 505));
+        assertEquals(1, sim.getTotalProcessed());
     }
 
     // ~ Random Generation & Overview Tests ....................................

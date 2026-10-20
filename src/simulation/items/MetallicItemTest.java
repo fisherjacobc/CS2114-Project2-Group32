@@ -49,11 +49,12 @@ public class MetallicItemTest {
     }
 
     /**
-     * Tests that each prohibited keyword in the name flags the item.
+     * Tests that each prohibited keyword in the name flags the item, and that
+     * "metal" alone does not.
      */
     @Test
     public void testIsProhibited_Keywords() {
-        assertTrue(new MetallicItem("Metal Pipe", false).isProhibited());
+        assertFalse(new MetallicItem("Metal Pipe", false).isProhibited());
         assertTrue(new MetallicItem("Toy Weapon", false).isProhibited());
         assertTrue(new MetallicItem("Prohibited Tool", false).isProhibited());
         assertTrue(new MetallicItem("Spare Battery", false).isProhibited());
@@ -64,8 +65,8 @@ public class MetallicItemTest {
      */
     @Test
     public void testIsProhibited_KeywordCaseAndSubstring() {
-        assertTrue(new MetallicItem("METAL", false).isProhibited());
-        assertTrue(new MetallicItem("Metallic Box", false).isProhibited());
+        assertTrue(new MetallicItem("WEAPON", false).isProhibited());
+        assertTrue(new MetallicItem("Weaponized Drone", false).isProhibited());
         assertTrue(new MetallicItem("BaTtErY pack", false).isProhibited());
     }
 

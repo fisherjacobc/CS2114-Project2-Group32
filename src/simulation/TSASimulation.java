@@ -178,42 +178,55 @@ public class TSASimulation {
             Passenger passenger = (Passenger) found;
             checkPassengerItems(passenger, scanner);
         } else {
+            removeFromLines(found);
+            totalProcessed++;
             System.out.println("Person is Crew; cleared for security.");
         }
     }
 
     /**
-     * Place a description of your method here.
+     * Checks a passenger's items and decides what happens to them. Every
+     * check removes the passenger from the line they were in.
+     * 
+     * On the initial check, a prohibited item lets the user choose to detain
+     * the passenger or send them to secondary screening, and a metallic item
+     * sends them to secondary screening automatically. If the passenger is
+     * already in secondary screening, a prohibited item detains them and
+     * otherwise they are cleared.
      * 
      * @param passenger the passenger getting checked
      * @param scanner   input
      */
     public void checkPassengerItems(Passenger passenger, Scanner scanner) {
-        boolean hasProhibited = false;
-        String flaggedReason = "";
+        boolean inSecondary = secondaryScreeningLine.getFirstReferenceToValue(passenger) != null;
+        String prohibitedReason = null;
+        boolean hasMetallic = false;
 
         if (passenger.getItems() != null) {
             for (ItemADT item : passenger.getItems()) {
-                if (item != null && item.isProhibited()) {
-                    hasProhibited = true;
-                    flaggedReason = item.getReason();
-                    break;
+                if (item == null) {
+                    continue;
+                }
+                if (prohibitedReason == null && item.isProhibited()) {
+                    prohibitedReason = item.getReason();
+                }
+                if (item instanceof MetallicItem) {
+                    hasMetallic = true;
                 }
             }
         }
 
-        if (hasProhibited) {
-            // Correctly unlink from whichever line they are currently in
-            Node<Person> stdNode = standardLine.getFirstReferenceToValue(passenger);
-            if (stdNode != null) {
-                standardLine.remove(stdNode);
-            }
-            Node<Person> preNode = preCheckLine.getFirstReferenceToValue(passenger);
-            if (preNode != null) {
-                preCheckLine.remove(preNode);
-            }
+        removeFromLines(passenger);
 
-            System.out.println("[FLAGGED] Violation detected: " + flaggedReason);
+        if (inSecondary) {
+            if (prohibitedReason != null) {
+                System.out.println("[FLAGGED] Secondary screening violation: " + prohibitedReason);
+                detainPassenger(passenger, prohibitedReason);
+            } else {
+                clearPassenger(passenger);
+            }
+        } else if (prohibitedReason != null) {
+            System.out.println("[FLAGGED] Violation detected: " + prohibitedReason);
             System.out.println("Choose Action for " + passenger.getName() + ":");
             System.out.println("  1. Detain Passenger");
             System.out.println("  2. Send to Secondary Screening Line");
@@ -222,16 +235,15 @@ public class TSASimulation {
             String choice = scanner.nextLine().trim();
 
             if ("1".equals(choice)) {
-                String timestamp = String.valueOf(System.currentTimeMillis());
-                detainedLog.add(new LogEntry(timestamp, passenger.getName(), flaggedReason, false));
-                System.out.println("--> Passenger " + passenger.getName() + " has been DETAINED.");
+                detainPassenger(passenger, prohibitedReason);
             } else {
-                secondaryScreeningLine.add(passenger);
-                totalFlagged++;
-                System.out.println("--> Passenger " + passenger.getName() + " moved to Secondary Screening Line.");
+                sendToSecondaryScreening(passenger);
             }
+        } else if (hasMetallic) {
+            System.out.println("[FLAGGED] Metallic item detected.");
+            sendToSecondaryScreening(passenger);
         } else {
-            System.out.println("CLEARED: No prohibited items found for " + passenger.getName() + ".");
+            clearPassenger(passenger);
         }
     }
 
@@ -263,6 +275,33 @@ public class TSASimulation {
             return match.getData();
 
         return null;
+    }
+
+    /**
+     * gets the number of people cleared or detained
+     *
+     * @return the total processed
+     */
+    public int getTotalProcessed() {
+        return totalProcessed;
+    }
+
+    /**
+     * gets the number of passengers sent to secondary screening
+     *
+     * @return the total flagged
+     */
+    public int getTotalFlagged() {
+        return totalFlagged;
+    }
+
+    /**
+     * gets the number of detained passengers
+     *
+     * @return the number of entries in the detained log
+     */
+    public int getTotalDetained() {
+        return detainedLog.size();
     }
 
     /**
@@ -327,8 +366,54 @@ public class TSASimulation {
     }
 
     /**
+     * removes a person from whichever line they are currently in
+     *
+     * @param person the person being removed
+     */
+    private void removeFromLines(Person person) {
+        standardLine.remove(standardLine.getFirstReferenceToValue(person));
+        preCheckLine.remove(preCheckLine.getFirstReferenceToValue(person));
+        secondaryScreeningLine.remove(secondaryScreeningLine.getFirstReferenceToValue(person));
+    }
+
+    /**
+     * clears a passenger through security
+     *
+     * @param passenger the passenger being cleared
+     */
+    private void clearPassenger(Passenger passenger) {
+        totalProcessed++;
+        System.out.println("CLEARED: No prohibited items found for " + passenger.getName() + ".");
+    }
+
+    /**
+     * detains a passenger and records them in the detained log
+     *
+     * @param passenger the passenger being detained
+     * @param reason    why the passenger is being detained
+     */
+    private void detainPassenger(Passenger passenger, String reason) {
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        detainedLog.add(new LogEntry(timestamp, passenger.getName(), reason, false));
+        totalProcessed++;
+        System.out.println("--> Passenger " + passenger.getName() + " has been DETAINED.");
+    }
+
+    /**
+     * moves a passenger to the secondary screening line
+     *
+     * @param passenger the passenger being moved
+     */
+    private void sendToSecondaryScreening(Passenger passenger) {
+        passenger.setSecondaryScreening(true);
+        secondaryScreeningLine.add(passenger);
+        totalFlagged++;
+        System.out.println("--> Passenger " + passenger.getName() + " moved to Secondary Screening Line.");
+    }
+
+    /**
      * decides whether to accept user entry
-     * 
+     *
      * @param scanner the user input
      * @return the number if successfully checked and accepted
      */
