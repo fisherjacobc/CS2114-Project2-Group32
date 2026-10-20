@@ -61,7 +61,7 @@ public class MainTest {
         provideInput("D\n");
         Main.main(new String[]{});
 
-        assertTrue(output.toString().contains("---MAIN MENU---"));
+        assertTrue(output.toString().contains("CS International Airport"));
     }
 
     /**
@@ -69,7 +69,7 @@ public class MainTest {
      */
     @Test
     public void testMain_InvalidInput() {
-        provideInput("Z\nd\n");
+        provideInput("Z\n\nd\n");
         Main.main(new String[]{});
 
         assertTrue(output.toString().contains("Invalid Input!"));
@@ -80,7 +80,7 @@ public class MainTest {
      */
     @Test
     public void testMain_AddRandomPassenger() {
-        provideInput("A\n a \nD\n");
+        provideInput("A\n\n a \n\nD\n");
         Main.main(new String[]{});
 
         assertFalse(output.toString().contains("Invalid Input!"));
