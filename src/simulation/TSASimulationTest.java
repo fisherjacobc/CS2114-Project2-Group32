@@ -4,6 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Scanner;
+
+import simulation.items.GenericItem;
+import simulation.items.ItemADT;
+import simulation.items.LiquidItem;
+import simulation.items.MetallicItem;
+
 /**
  * Unit tests for the TSASimulation class. Tests pure domain logic, 
  * passenger routing, search functionality, item screening, and validation.
@@ -93,7 +100,7 @@ public class TSASimulationTest {
      */
     @Test
     public void testRoutePassenger_StandardPassenger() {
-        Passenger p = new Passenger("Alice Johnson", 202, false, false, new String[]{"Laptop"});
+        Passenger p = new Passenger("Alice Johnson", 202, false, false, new ItemADT[]{ new GenericItem("Laptop", false) });
         sim.routePassenger(p);
 
         Person found = sim.searchPassenger("Alice Johnson", 202);
@@ -106,7 +113,7 @@ public class TSASimulationTest {
      */
     @Test
     public void testRoutePassenger_PreCheckPassenger() {
-        Passenger p = new Passenger("Bob Martinez", 303, true, false, new String[]{"Bag"});
+        Passenger p = new Passenger("Bob Martinez", 303, true, false, new ItemADT[]{ new GenericItem("Bag", false) });
         sim.routePassenger(p);
 
         Person found = sim.searchPassenger("Bob Martinez", 303);
@@ -119,7 +126,7 @@ public class TSASimulationTest {
      */
     @Test
     public void testRoutePassenger_SecondaryScreeningPassenger() {
-        Passenger p = new Passenger("John Patel", 404, false, true, new String[]{"Bag"});
+        Passenger p = new Passenger("John Patel", 404, false, true, new ItemADT[]{ new GenericItem("Bag", false) });
         sim.routePassenger(p);
 
         Person found = sim.searchPassenger("John Patel", 404);
@@ -157,7 +164,7 @@ public class TSASimulationTest {
      */
     @Test
     public void testSearchPassenger_CaseInsensitiveName() {
-        Passenger p = new Passenger("Diana Prince", 606, false, false, new String[]{"Metal"});
+        Passenger p = new Passenger("Diana Prince", 606, false, false, new ItemADT[]{ new MetallicItem("Metal", false) });
         sim.routePassenger(p);
 
         assertNotNull(sim.searchPassenger("diana prince", 606));
@@ -169,7 +176,7 @@ public class TSASimulationTest {
      */
     @Test
     public void testSearchPassenger_NotFound() {
-        Passenger p = new Passenger("Ethan Hunt", 707, false, false, new String[]{"Bag"});
+        Passenger p = new Passenger("Ethan Hunt", 707, false, false, new ItemADT[]{ new GenericItem("Bag", false) });
         sim.routePassenger(p);
 
         assertNull(sim.searchPassenger("Ethan Hunt", 999));
@@ -183,10 +190,10 @@ public class TSASimulationTest {
      */
     @Test
     public void testCheckPassengerItems_SafeItems() {
-        Passenger p = new Passenger("Fiona Jones", 808, false, false, new String[]{"Laptop", "Bag"});
+        Passenger p = new Passenger("Fiona Jones", 808, false, false, new ItemADT[]{ new GenericItem("Laptop", false), new GenericItem("Bag", false) });
         sim.routePassenger(p);
 
-        sim.checkPassengerItems(p);
+        sim.checkPassengerItems(p, new Scanner("2\n"));
 
         Person found = sim.searchPassenger("Fiona Jones", 808);
         assertNotNull(found);
@@ -198,10 +205,10 @@ public class TSASimulationTest {
      */
     @Test
     public void testCheckPassengerItems_ProhibitedWaterBottle() {
-        Passenger p = new Passenger("Bad Actor", 909, false, false, new String[]{"Water Bottle"});
+        Passenger p = new Passenger("Bad Actor", 909, false, false, new ItemADT[]{ new LiquidItem("Water Bottle", 16.0) });
         sim.routePassenger(p);
 
-        sim.checkPassengerItems(p);
+        sim.checkPassengerItems(p, new Scanner("2\n"));
 
         Person found = sim.searchPassenger("Bad Actor", 909);
         assertNotNull(found);
@@ -212,10 +219,10 @@ public class TSASimulationTest {
      */
     @Test
     public void testCheckPassengerItems_ProhibitedKnife() {
-        Passenger p = new Passenger("Risk Person", 111, true, false, new String[]{"Knife"});
+        Passenger p = new Passenger("Risk Person", 111, true, false, new ItemADT[]{ new MetallicItem("Knife", true) });
         sim.routePassenger(p);
 
-        sim.checkPassengerItems(p);
+        sim.checkPassengerItems(p, new Scanner("2\n"));
 
         Person found = sim.searchPassenger("Risk Person", 111);
         assertNotNull(found);
@@ -227,13 +234,13 @@ public class TSASimulationTest {
     @Test
     public void testCheckPassengerItems_NullOrEmptyItems() {
         Passenger p1 = new Passenger("No Items", 222, false, false, null);
-        Passenger p2 = new Passenger("Empty Array", 333, false, false, new String[]{});
+        Passenger p2 = new Passenger("Empty Array", 333, false, false, new ItemADT[]{});
 
         sim.routePassenger(p1);
         sim.routePassenger(p2);
 
-        sim.checkPassengerItems(p1);
-        sim.checkPassengerItems(p2);
+        sim.checkPassengerItems(p1, new Scanner("2\n"));
+        sim.checkPassengerItems(p2, new Scanner("2\n"));
 
         assertNotNull(sim.searchPassenger("No Items", 222));
         assertNotNull(sim.searchPassenger("Empty Array", 333));
