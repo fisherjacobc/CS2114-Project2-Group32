@@ -3,6 +3,7 @@ package simulation;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
@@ -57,6 +58,16 @@ public class TSASimulation {
 
     private int lastPassengerNameIndex = -1;
     private int lastCrewNameIndex = -1;
+
+    // How many turns it takes to screen the person at the front of each line,
+    // in getLines() order (Secondary, Standard, PreCheck). Raise these to make
+    // the lines move slower.
+    private static final int[] TURNS_TO_SCREEN = { 5, 3, 2 };
+
+    // The person at the front of each line (in getLines() order) the last
+    // time checkFrontOfLines ran, and how many turns they have been screened
+    private final Person[] waitingAtFront = new Person[3];
+    private final int[] turnsAtFront = new int[3];
 
     private int totalProcessed = 0;
     private int totalFlagged = 0;
@@ -218,6 +229,89 @@ public class TSASimulation {
      * @param scanner   input
      */
     public void checkPassengerItems(Passenger passenger, Scanner scanner) {
+        screenPassenger(passenger, scanner, true);
+    }
+
+    /**
+     * Works on screening the person at the front of each line. Someone who
+     * reaches the front waits one turn, then takes TURNS_TO_SCREEN turns
+     * for their line before they are checked, so slower lines build up.
+     * 
+     * Secondary screening is checked first, so anyone moved there this turn
+     * waits until the next turn. Passengers with a prohibited item are sent
+     * to secondary screening automatically instead of asking for a choice.
+     */
+    public void checkFrontOfLines() {
+        LinkedChain<Person>[] lines = getLines();
+        String[] lineNames = { "Secondary", "Standard", "PreCheck" };
+        boolean printedHeader = false;
+
+        for (int i = 0; i < lines.length; i++) {
+            Node<Person> front = lines[i].getLastNode();
+            if (front == null || front.getData() != waitingAtFront[i]) {
+                continue;
+            }
+
+            if (!printedHeader) {
+                System.out.println("┌──Line Activity────────────────────────┐");
+                printedHeader = true;
+            } else {
+                System.out.println("│                                       │");
+            }
+
+            Person person = front.getData();
+            printRow("[" + lineNames[i] + "] " + person.getName());
+
+            turnsAtFront[i]++;
+            if (turnsAtFront[i] < TURNS_TO_SCREEN[i]) {
+                printRow("Screening... (" + turnsAtFront[i] + "/" + TURNS_TO_SCREEN[i] + ")");
+                continue;
+            }
+
+            if (person instanceof Passenger) {
+                screenPassenger((Passenger) person, null, false);
+            } else {
+                removeFromLines(person);
+                totalProcessed++;
+                System.out.println("│ CLEARED: Crew member                  │");
+            }
+        }
+
+        if (printedHeader) {
+            System.out.println("└───────────────────────────────────────┘");
+        }
+
+        for (int i = 0; i < lines.length; i++) {
+            Node<Person> front = lines[i].getLastNode();
+            Person person = front == null ? null : front.getData();
+            if (person != waitingAtFront[i]) {
+                waitingAtFront[i] = person;
+                turnsAtFront[i] = 0;
+            }
+        }
+    }
+
+    /**
+     * gets the lines in the order checkFrontOfLines checks them
+     *
+     * @return the secondary screening, standard, and PreCheck lines
+     */
+    @SuppressWarnings("unchecked")
+    private LinkedChain<Person>[] getLines() {
+        return new LinkedChain[] { secondaryScreeningLine, standardLine, preCheckLine };
+    }
+
+    /**
+     * Checks a passenger's items and decides what happens to them. Every
+     * check removes the passenger from the line they were in.
+     * 
+     * @param passenger    the passenger getting checked
+     * @param scanner      input, only used if askForChoice is true
+     * @param askForChoice true to ask whether to detain a passenger with a
+     *                     prohibited item, false to send them to secondary
+     *                     screening automatically
+     */
+    private void screenPassenger(Passenger passenger, Scanner scanner, boolean askForChoice) {
         boolean inSecondary = secondaryScreeningLine.getFirstReferenceToValue(passenger) != null;
         String prohibitedReason = null;
         boolean hasMetallic = false;
@@ -246,6 +340,10 @@ public class TSASimulation {
             } else {
                 clearPassenger(passenger);
             }
+        } else if (prohibitedReason != null && !askForChoice) {
+            printRow("[FLAGGED] Violation detected");
+            printRow("  " + prohibitedReason);
+            sendToSecondaryScreening(passenger);
         } else if (prohibitedReason != null) {
             printRow("[FLAGGED] Violation detected");
             printRow("  " + prohibitedReason);
@@ -355,6 +453,60 @@ public class TSASimulation {
         }
         System.out.println("│                                       │");
         System.out.println("└───────────────────────────────────────┘");
+    }
+
+    /**
+     * prints all three lines side by side, with the front of each line at
+     * the top and the back of each line at the bottom
+     */
+    public void printLines() {
+        List<Person> standard = standardLine.toList();
+        List<Person> preCheck = preCheckLine.toList();
+        List<Person> secondary = secondaryScreeningLine.toList();
+
+        // New people are added at the head of the chain, so the front of the
+        // line is the end of the list
+        Collections.reverse(standard);
+        Collections.reverse(preCheck);
+        Collections.reverse(secondary);
+
+        int rows = Math.max(1, Math.max(standard.size(), Math.max(preCheck.size(), secondary.size())));
+
+        System.out.println("┌──Security Lines (front to back)─────────────────────────────────────────┐");
+        System.out.println("├────┬──────────────────────┬──────────────────────┬──────────────────────┤");
+        System.out.printf("│  # │ %-20s │ %-20s │ %-20s │%n",
+                "Standard (" + standard.size() + ")",
+                "PreCheck (" + preCheck.size() + ")",
+                "Secondary (" + secondary.size() + ")");
+        System.out.println("├────┼──────────────────────┼──────────────────────┼──────────────────────┤");
+        for (int i = 0; i < rows; i++) {
+            System.out.printf("│ %2d │ %-20s │ %-20s │ %-20s │%n", i + 1,
+                    getLineCell(standard, i), getLineCell(preCheck, i), getLineCell(secondary, i));
+        }
+        System.out.println("└────┴──────────────────────┴──────────────────────┴──────────────────────┘");
+    }
+
+    /**
+     * gets the text for one spot in a line
+     *
+     * @param line     the people in the line, front first
+     * @param position the spot in the line
+     * @return the person's name, "(empty)" for an empty line, or blank if
+     *         the line is shorter than the position
+     */
+    private String getLineCell(List<Person> line, int position) {
+        if (line.isEmpty()) {
+            return position == 0 ? "(empty)" : "";
+        }
+        if (position >= line.size()) {
+            return "";
+        }
+
+        String name = line.get(position).getName();
+        if (name.length() > 20) {
+            return name.substring(0, 19) + "…";
+        }
+        return name;
     }
 
     /**

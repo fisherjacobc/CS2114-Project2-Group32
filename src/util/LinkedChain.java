@@ -1,5 +1,8 @@
 package util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * <h3>LinkedChain</h3>
  * 
@@ -157,6 +160,24 @@ public class LinkedChain<T> {
     public void removeAll() {
         head = null;
         numberOfEntries = 0;
+    }
+
+    /**
+     * Returns the entries in this linked chain, in the order they appear in
+     * the chain (head to tail).
+     *
+     * @return a list of the entries, empty if the chain is empty
+     */
+    public List<T> toList() {
+        List<T> entries = new ArrayList<>();
+        Node<T> curr = head;
+
+        while (curr != null) {
+            entries.add(curr.getData());
+            curr = curr.getNext();
+        }
+
+        return entries;
     }
 
     /**

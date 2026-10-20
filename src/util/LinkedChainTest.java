@@ -1,6 +1,7 @@
 package util;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -192,6 +193,22 @@ public class LinkedChainTest {
         assertEquals(0, chain.getCurrentSize());
         assertFalse(chain.contains("A"));
         assertEquals("", chain.toString());
+    }
+
+    // ~ toList Tests ..........................................................
+
+    /**
+     * Tests toList returns entries from head to tail, and an empty list for
+     * an empty chain.
+     */
+    @Test
+    public void testToList() {
+        assertTrue(chain.toList().isEmpty());
+
+        chain.add("A");
+        chain.add("B");
+        chain.add("C");
+        assertEquals(List.of("C", "B", "A"), chain.toList());
     }
 
     // ~ toString Tests ........................................................

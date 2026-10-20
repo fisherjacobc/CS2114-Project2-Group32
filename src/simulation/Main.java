@@ -19,6 +19,9 @@ public class Main {
         while (running) {
             clearScreen();
 
+            simulation.printLines();
+            System.out.println();
+
             System.out.println("┌──CS International Airport─────────────┐");
             System.out.println("│                                       │");
             System.out.println("│ [A] Add Random Passenger/Crew         │");
@@ -33,14 +36,17 @@ public class Main {
             switch (choice) {
                 case "A":
                     simulation.addRandomPassenger();
+                    simulation.checkFrontOfLines();
                     pause(scanner);
                     break;
                 case "B":
                     simulation.addCustomPassenger(scanner);
+                    simulation.checkFrontOfLines();
                     pause(scanner);
                     break;
                 case "C":
                     simulation.searchAndCheckPassenger(scanner);
+                    simulation.checkFrontOfLines();
                     pause(scanner);
                     break;
                 case "D": {

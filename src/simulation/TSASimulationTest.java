@@ -24,6 +24,7 @@ public class TSASimulationTest {
 
     private TSASimulation sim;
     private PrintStream originalOut;
+    private ByteArrayOutputStream output;
 
     /**
      * Sets up a fresh TSASimulation instance and redirects System.out
@@ -33,7 +34,8 @@ public class TSASimulationTest {
     public void setUp() {
         sim = new TSASimulation();
         originalOut = System.out;
-        System.setOut(new PrintStream(new ByteArrayOutputStream()));
+        output = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(output));
     }
 
     /**
@@ -365,6 +367,129 @@ public class TSASimulationTest {
         assertEquals(1, sim.getTotalProcessed());
     }
 
+    // ~ Front of Line Tests ...................................................
+
+    /**
+     * Runs checkFrontOfLines the given number of times.
+     * 
+     * @param turns how many turns to run
+     */
+    private void advance(int turns) {
+        for (int i = 0; i < turns; i++) {
+            sim.checkFrontOfLines();
+        }
+    }
+
+    /**
+     * Tests that someone in the standard line waits one turn and is then
+     * screened for three turns before being cleared.
+     */
+    @Test
+    public void testCheckFrontOfLines_StandardTakesThreeTurns() {
+        sim.routePassenger(new Passenger("Fiona Jones", 808, false, false, new ItemADT[]{ new GenericItem("Laptop", false) }));
+
+        advance(3);
+        assertNotNull(sim.searchPassenger("Fiona Jones", 808));
+        assertTrue(output.toString().contains("Screening... (2/3)"));
+
+        advance(1);
+        assertNull(sim.searchPassenger("Fiona Jones", 808));
+        assertEquals(1, sim.getTotalProcessed());
+    }
+
+    /**
+     * Tests that the PreCheck line is screened in two turns.
+     */
+    @Test
+    public void testCheckFrontOfLines_PreCheckTakesTwoTurns() {
+        sim.routePassenger(new Passenger("PreCheck Person", 102, true, false, null));
+
+        advance(2);
+        assertNotNull(sim.searchPassenger("PreCheck Person", 102));
+
+        advance(1);
+        assertNull(sim.searchPassenger("PreCheck Person", 102));
+    }
+
+    /**
+     * Tests that the secondary screening line takes five turns.
+     */
+    @Test
+    public void testCheckFrontOfLines_SecondaryTakesFiveTurns() {
+        sim.routePassenger(new Passenger("Secondary Person", 103, false, true, null));
+
+        advance(5);
+        assertNotNull(sim.searchPassenger("Secondary Person", 103));
+
+        advance(1);
+        assertNull(sim.searchPassenger("Secondary Person", 103));
+    }
+
+    /**
+     * Tests that only the front of a line is screened, in the order people
+     * joined, and that the next person starts once the front leaves.
+     */
+    @Test
+    public void testCheckFrontOfLines_FrontOnly() {
+        sim.routePassenger(new Passenger("First Person", 101, false, false, null));
+        sim.routePassenger(new Passenger("Second Person", 102, false, false, null));
+
+        advance(4);
+        assertNull(sim.searchPassenger("First Person", 101));
+        assertNotNull(sim.searchPassenger("Second Person", 102));
+
+        advance(2);
+        assertNotNull(sim.searchPassenger("Second Person", 102));
+
+        advance(1);
+        assertNull(sim.searchPassenger("Second Person", 102));
+    }
+
+    /**
+     * Tests that a prohibited item sends the passenger to secondary
+     * screening without asking, and that they are detained once secondary
+     * screening finishes if they still have it.
+     */
+    @Test
+    public void testCheckFrontOfLines_ProhibitedThenDetained() {
+        Passenger p = new Passenger("Bad Actor", 909, false, false, new ItemADT[]{ new LiquidItem("Water Bottle", 16.0) });
+        sim.routePassenger(p);
+
+        advance(4);
+        assertNotNull(sim.searchPassenger("Bad Actor", 909));
+        assertTrue(p.isSecondaryScreening());
+        assertEquals(1, sim.getTotalFlagged());
+
+        advance(4);
+        assertNotNull(sim.searchPassenger("Bad Actor", 909));
+
+        advance(1);
+        assertNull(sim.searchPassenger("Bad Actor", 909));
+        assertEquals(1, sim.getTotalDetained());
+    }
+
+    /**
+     * Tests that a crew member at the front of a line is cleared.
+     */
+    @Test
+    public void testCheckFrontOfLines_Crew() {
+        sim.routePassenger(new Crew("Capt. Smith", 505, "Emp123", true));
+
+        advance(4);
+
+        assertNull(sim.searchPassenger("Capt. Smith", 505));
+        assertEquals(1, sim.getTotalProcessed());
+    }
+
+    /**
+     * Tests that nothing is printed when no one is waiting at a front.
+     */
+    @Test
+    public void testCheckFrontOfLines_NothingWaiting() {
+        sim.checkFrontOfLines();
+        assertFalse(output.toString().contains("Line Activity"));
+    }
+
     // ~ Random Generation & Overview Tests ....................................
 
     /**
@@ -382,5 +507,39 @@ public class TSASimulationTest {
     @Test
     public void testPrintSimulationOverview() {
         sim.printSimulationOverview();
+    }
+
+    // ~ Line Display Tests ....................................................
+
+    /**
+     * Tests that printLines shows each line from front to back, with the
+     * size of each line in its column header.
+     */
+    @Test
+    public void testPrintLines() {
+        sim.routePassenger(new Passenger("First Person", 101, false, false, null));
+        sim.routePassenger(new Passenger("Second Person", 102, false, false, null));
+        sim.routePassenger(new Passenger("PreCheck Person", 103, true, false, null));
+
+        sim.printLines();
+        String printed = output.toString();
+
+        assertTrue(printed.contains("Standard (2)"));
+        assertTrue(printed.contains("PreCheck (1)"));
+        assertTrue(printed.contains("Secondary (0)"));
+        assertTrue(printed.indexOf("First Person") < printed.indexOf("Second Person"));
+    }
+
+    /**
+     * Tests that printLines shows empty lines and shortens long names.
+     */
+    @Test
+    public void testPrintLines_EmptyAndLongName() {
+        sim.printLines();
+        assertTrue(output.toString().contains("(empty)"));
+
+        sim.routePassenger(new Passenger("Bartholomew Montgomery III", 101, false, false, null));
+        sim.printLines();
+        assertTrue(output.toString().contains("Bartholomew Montgom…"));
     }
 }
