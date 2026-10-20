@@ -43,12 +43,25 @@ public class TSASimulation {
 
     private static final String[] PASSENGER_NAMES = {
             "Alice Johnson", "Bob Martinez", "John Patel", "Diana Prince",
-            "Ethan Hunt", "Fiona Jones"
+            "Ethan Hunt", "Fiona Jones", "George Kim", "Hannah Schmidt",
+            "Ivan Petrov", "Julia Roberts", "Kevin O'Brien", "Laura Chen",
+            "Marcus Brown", "Nina Alvarez", "Oscar Nguyen", "Priya Shah",
+            "Quentin Hayes", "Rachel Green", "Samuel Okafor", "Tara Walsh",
+            "Umar Farouk", "Valerie Cruz", "William Turner", "Ximena Lopez",
+            "Yusuf Demir", "Zoe Bennett", "Aaron Fischer", "Bianca Rossi",
+            "Carlos Mendes", "Daniela Silva", "Elijah Moore", "Grace Park",
+            "Hiroshi Tanaka", "Isla McKenzie", "Jamal Washington", "Keiko Sato",
+            "Liam Murphy", "Maya Goldberg", "Noah Fitzgerald", "Olivia Wright"
     };
 
     private static final String[] CREW_NAMES = {
+            "Capt. Fisher", "Capt. Quesenberry", "Capt. Moreno", "Capt. Molina",
             "Capt. Smith", "First Officer Miller", "Purser Davis",
-            "Flight Attendant Lee"
+            "Flight Attendant Lee", "Capt. Reynolds", "Capt. Okonkwo",
+            "Capt. Larsen", "First Officer Grant", "First Officer Wu",
+            "First Officer Novak", "Purser Ramirez", "Purser Thompson",
+            "Attendant Garcia", "Attendant Nakamura", "Attendant Collins",
+            "Attendant Dubois", "Attendant Singh", "Attendant Harper"
     };
 
     private final LinkedChain<Person> standardLine = new LinkedChain<>();
